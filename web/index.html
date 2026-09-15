@@ -1,11 +1,78 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DungBall FC</title><link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#05080c">
+  <title>DungBall FC — Neural Match Lab</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main><header><div><p class="eyebrow">EXPERIMENT 001</p><h1>DungBall FC</h1><p>A plastic fly brain learns the beautiful game.</p></div><div class="live"><i></i> LIVE TRAINING</div></header>
-  <section class="layout"><div class="card arena-card"><canvas id="arena" width="1000" height="600"></canvas><div class="controls"><button data-api="pause">Pause</button><button data-api="mode">Training / Evaluation</button><button class="danger" data-api="reset">Reset brain</button></div></div>
-  <aside><div class="card stats"><div><span>Episode</span><strong id="episode">–</strong></div><div><span>Goals</span><strong id="goals">–</strong></div><div><span>Mode</span><strong id="mode">–</strong></div></div><div class="card brain"><h2>Neural activity</h2><div id="bars"></div><h2>Dopamine</h2><div class="dopamine"><i id="dopamine"></i></div><p id="reward"></p></div><div class="card note"><b>MVP brain</b><p>This uses a small synthetic plastic policy. MaleCNS connectivity is the next adapter—not a claim that a biological fly learned soccer.</p></div></aside></section></main><script src="app.js"></script>
-</body></html>
+  <div class="noise"></div>
+  <main>
+    <header>
+      <div class="brand">
+        <div class="mark"><span></span><span></span></div>
+        <div><p>DUNGBALL</p><h1>NEURAL <i>FC</i></h1></div>
+      </div>
+      <div class="session">
+        <span id="liveDot" class="live-dot"></span>
+        <div><b id="sessionMode">TRAINING LIVE</b><small id="checkpointStatus">UNSAVED POLICY</small></div>
+      </div>
+    </header>
+
+    <section class="dashboard">
+      <div class="stadium-shell">
+        <canvas id="arena" aria-label="Live 3D dung ball football match"></canvas>
+        <div class="arena-gradient"></div>
+        <div class="scoreboard glass">
+          <div class="club blue"><i></i><span>AZURE SWARM</span></div>
+          <strong><span id="blueScore">0</span><em>:</em><span id="orangeScore">0</span></strong>
+          <div class="club orange"><span>EMBER SWARM</span><i></i></div>
+        </div>
+        <div class="round-chip glass">ROUND <b id="episode">001</b><span></span><b id="matchClock">00:00</b></div>
+        <div class="camera-hint">DRAG TO ORBIT · SCROLL TO ZOOM</div>
+        <div class="render-error" id="renderError" style="display:none" hidden>Your browser could not start WebGL.</div>
+      </div>
+
+      <div class="control-strip">
+        <button id="pauseButton" class="control primary"><span class="pause-icon"></span><b>Pause match</b><small>Space</small></button>
+        <button id="modeButton" class="control"><span class="eye-icon"></span><b>Evaluate policy</b><small>Freeze learning</small></button>
+        <label class="match-size"><span>Match format</span><select id="teamSize" aria-label="Players per team"><option value="1">1 vs 1</option><option value="2" selected>2 vs 2</option><option value="3">3 vs 3</option><option value="4">4 vs 4</option><option value="5">5 vs 5</option></select></label>
+        <button id="resetButton" class="control danger"><span class="reset-icon">↻</span><b>Reset brains</b><small>Start fresh</small></button>
+      </div>
+
+      <div class="metrics-grid">
+        <article class="panel performance">
+          <div class="panel-head"><div><p>LIVE PERFORMANCE</p><h2>Match intelligence</h2></div><span id="rounds">0 ROUNDS</span></div>
+          <div class="metric-row">
+            <div><span>Possession</span><strong class="blue-text" id="bluePossession">50%</strong><small>Azure</small></div>
+            <div class="versus-bar"><i id="possessionBar"></i></div>
+            <div class="align-right"><span>Possession</span><strong class="orange-text" id="orangePossession">50%</strong><small>Ember</small></div>
+          </div>
+          <div class="reward-grid">
+            <div><span>AZURE MEAN REWARD</span><strong id="blueReward">+0.000</strong><div class="spark" id="blueSpark"></div></div>
+            <div><span>EMBER MEAN REWARD</span><strong id="orangeReward">+0.000</strong><div class="spark orange-spark" id="orangeSpark"></div></div>
+          </div>
+        </article>
+
+        <article class="panel neural">
+          <div class="panel-head"><div><p>POLICY OUTPUT</p><h2>Neural activity</h2></div><select id="agentSelect" aria-label="Selected fly"></select></div>
+          <div id="actionBars" class="action-bars"></div>
+          <div class="dopamine-row"><span>DOPAMINE SIGNAL</span><div><i id="dopamineBar"></i></div><b id="dopamineValue">0.000</b></div>
+        </article>
+
+        <article class="panel checkpoints">
+          <div class="panel-head"><div><p>MODEL VAULT</p><h2>Checkpoints</h2></div><span class="vault-icon">⌁</span></div>
+          <p class="helper">Save the current trained weights, or load a checkpoint and run it with learning frozen.</p>
+          <div class="save-row"><input id="checkpointName" value="my-trained-team" maxlength="80" aria-label="Checkpoint name"><button id="saveCheckpoint">Save</button></div>
+          <div id="checkpointList" class="checkpoint-list"><div class="empty">No checkpoints yet</div></div>
+          <label class="upload"><input id="checkpointUpload" type="file" accept="application/json,.json"><span>＋ Import checkpoint file</span></label>
+        </article>
+      </div>
+    </section>
+  </main>
+  <div id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

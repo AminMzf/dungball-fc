@@ -58,3 +58,30 @@ class PlasticBrain:
 
     def reset_state(self) -> None:
         self.eligibility = [[0.0 for _ in range(self.inputs)] for _ in ACTIONS]
+
+    def to_dict(self) -> dict:
+        return {
+            "type": "PlasticBrain",
+            "inputs": self.inputs,
+            "learningRate": self.learning_rate,
+            "traceDecay": self.trace_decay,
+            "weights": [row[:] for row in self.weights],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict, seed: int = 0) -> "PlasticBrain":
+        if data.get("type") != "PlasticBrain":
+            raise ValueError("Unsupported brain type")
+        inputs = int(data["inputs"])
+        weights = data["weights"]
+        if len(weights) != len(ACTIONS) or any(len(row) != inputs for row in weights):
+            raise ValueError("Checkpoint weight dimensions are invalid")
+        brain = cls(
+            inputs=inputs,
+            learning_rate=float(data.get("learningRate", 0.025)),
+            trace_decay=float(data.get("traceDecay", 0.85)),
+            seed=seed,
+        )
+        brain.weights = [[float(value) for value in row] for row in weights]
+        brain.reset_state()
+        return brain
