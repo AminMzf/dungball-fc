@@ -1,0 +1,8 @@
+[project]
+name = "dungball-fc"
+version = "0.1.0"
+description = "Fly-inspired agents learning dung-ball soccer"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
