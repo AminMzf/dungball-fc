@@ -26,8 +26,28 @@ python -m unittest discover -s tests -v
 Run headless training:
 
 ```bash
-python -m dungball_fc.train --episodes 1000 --team-size 2 --checkpoint trained-team
+python -m dungball_fc.train --steps 1000000 --team-size 2 --checkpoint flies-2v2-1m
 ```
+
+`--steps` counts actual environment/learning steps. This is the recommended
+training unit: one round may last 1,200 steps, so `--episodes 1000000` would be
+an unnecessarily huge run. The first 75,000 steps use a fading movement coach
+to teach approach, alignment, and pushing; evaluation never uses the coach.
+
+Continue an existing checkpoint for another one million steps:
+
+```bash
+python -m dungball_fc.train --steps 1000000 --resume flies-2v2-1m --checkpoint flies-2v2-2m
+```
+
+Older 15-input checkpoints are accepted and expanded for the new navigation
+features when loaded. A fresh run generally learns the curriculum more cleanly.
+
+Use `--coach-steps 0` for pure self-play or change the curriculum length. The
+CLI reports steps, rounds, scores, draws, and the remaining coach percentage so
+you can tell whether the ball is producing goals instead of assuming that a
+longer run is learning. At the end it also runs frozen evaluation rounds and
+reports goal rate, contacts, ball travel, and mean round length.
 
 ## What is implemented
 

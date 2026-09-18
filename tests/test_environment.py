@@ -39,6 +39,40 @@ class ArenaTests(unittest.TestCase):
         self.assertEqual(set(rewards), {"blue", "orange"})
         self.assertFalse(done)
 
+    def test_team_observation_includes_near_ball_mode_features(self):
+        arena = TeamArena(seed=1, team_size=2)
+        fly = arena.flies[0]
+        arena.ball.x, arena.ball.y = fly.x + 20, fly.y
+        observation = arena.observe(fly)
+        self.assertEqual(len(observation), 23)
+        self.assertGreater(observation[15], 0.5)
+
+    def test_coach_turns_toward_ball_and_pushes_when_aligned(self):
+        arena = TeamArena(seed=1, team_size=2)
+        fly = arena.flies[0]
+        fly.x, fly.y, fly.angle = 450, 300, 0
+        arena.ball.x, arena.ball.y = 480, 300
+        self.assertEqual(arena.coach_action(fly), "push")
+        fly.angle = -1.0
+        self.assertEqual(arena.coach_action(fly), "right")
+
+    def test_imitation_increases_probability_of_coached_action(self):
+        brain = PlasticBrain(inputs=7, seed=1)
+        observation = [1.0, 0.3, 0.0, 1.0, 0.8, 0.0, 1.0]
+        before = brain._policy(observation)[1][ACTIONS.index("forward")]
+        for _ in range(20):
+            brain.imitate(observation, "forward")
+        after = brain._policy(observation)[1][ACTIONS.index("forward")]
+        self.assertGreater(after, before)
+
+    def test_old_brain_can_expand_for_new_observations(self):
+        brain = PlasticBrain(inputs=15, seed=1)
+        original = [row[:] for row in brain.weights]
+        brain.ensure_inputs(23)
+        self.assertEqual(brain.inputs, 23)
+        self.assertTrue(all(row[:15] == old for row, old in zip(brain.weights, original)))
+        self.assertTrue(all(row[15:] == [0.0] * 8 for row in brain.weights))
+
     def test_team_arena_scoring_works_from_both_sides(self):
         arena = TeamArena(seed=1, team_size=2)
         arena.ball.x, arena.ball.y, arena.ball.vx = 999, HEIGHT / 2, 5
@@ -61,6 +95,13 @@ class ArenaTests(unittest.TestCase):
         self.assertEqual(before, trainer.brains["blue"].weights)
         self.assertFalse(trainer.training)
         self.assertEqual(trainer.active_checkpoint, "unit-test.json")
+
+    def test_frozen_evaluation_reports_movement_metrics(self):
+        trainer = Trainer(seed=3)
+        result = trainer.evaluate(rounds=1)
+        self.assertEqual(result["rounds"], 1)
+        self.assertIn("goalRate", result)
+        self.assertGreaterEqual(result["ballTravelPerRound"], 0.0)
 
 
 if __name__ == "__main__":

@@ -176,6 +176,20 @@ class TeamArena:
         bearing = self._wrap(math.atan2(target.y - fly.y, target.x - fly.x) - fly.angle)
         return min(1.0, self._distance(fly, target) / WIDTH), math.sin(bearing), math.cos(bearing)
 
+    def _navigation_bearing(self, fly: FlyBody) -> tuple[float, float]:
+        """Return distance to ball and bearing for a useful ball approach."""
+        attack_direction = 1.0 if fly.team == "blue" else -1.0
+        ball_distance = self._distance(fly, self.ball)
+        if ball_distance > 62.0:
+            target = Body(
+                min(WIDTH - 25.0, max(25.0, self.ball.x - attack_direction * 46.0)),
+                self.ball.y,
+            )
+        else:
+            target = Body(WIDTH if fly.team == "blue" else 0.0, HEIGHT / 2)
+        bearing = self._wrap(math.atan2(target.y - fly.y, target.x - fly.x) - fly.angle)
+        return ball_distance, bearing
+
     def observe(self, fly: FlyBody) -> list[float]:
         enemy_x = WIDTH if fly.team == "blue" else 0.0
         enemy_goal = Body(enemy_x, HEIGHT / 2)
@@ -184,19 +198,49 @@ class TeamArena:
         teammate = min(teammates, key=lambda other: self._distance(fly, other), default=fly)
         opponent = min(opponents, key=lambda other: self._distance(fly, other), default=fly)
         team_direction = 1.0 if fly.team == "blue" else -1.0
+        ball = self._relative(fly, self.ball)
+        goal = self._relative(fly, enemy_goal)
+        # These gated features let a linear policy express the two useful modes:
+        # chase the ball while far away, then face the goal while in possession.
+        # Without the interaction terms it cannot represent that switch.
+        near_ball = max(0.0, min(1.0, 1.0 - ball[0] / 0.12))
+        far_ball = 1.0 - near_ball
+        ball_distance, navigation_bearing = self._navigation_bearing(fly)
+        push_ready = float(ball_distance < 44.0 and abs(navigation_bearing) <= 0.16)
         return [
             1.0,
-            *self._relative(fly, self.ball),
-            *self._relative(fly, enemy_goal),
+            *ball,
+            *goal,
             *self._relative(fly, teammate),
             *self._relative(fly, opponent),
             max(-1.0, min(1.0, self.ball.vx * team_direction / 12.0)),
             max(-1.0, min(1.0, self.ball.vy / 12.0)),
+            near_ball,
+            near_ball * goal[1],
+            near_ball * goal[2],
+            far_ball * ball[1],
+            far_ball * ball[2],
+            math.sin(navigation_bearing),
+            math.cos(navigation_bearing),
+            push_ready,
         ]
+
+    def coach_action(self, fly: FlyBody) -> str:
+        """A simple curriculum teacher: get behind the ball, then push at goal."""
+        ball_distance, bearing = self._navigation_bearing(fly)
+        if bearing > 0.16:
+            return "right"
+        if bearing < -0.16:
+            return "left"
+        return "push" if ball_distance < 44.0 else "forward"
 
     def step(self, actions: dict[str, str]) -> tuple[dict[str, list[float]], dict[str, float], bool, dict]:
         self.step_count += 1
         old_ball_x = self.ball.x
+        old_ball_distances = {
+            team: min(self._distance(fly, self.ball) for fly in self.flies if fly.team == team)
+            for team in ("blue", "orange")
+        }
         contacts = {"blue": 0, "orange": 0}
 
         for fly in self.flies:
@@ -257,9 +301,15 @@ class TeamArena:
             self.ball.vx *= -0.76
 
         progress = (self.ball.x - old_ball_x) * 0.003
+        approach = {
+            team: old_ball_distances[team] - min(
+                self._distance(fly, self.ball) for fly in self.flies if fly.team == team
+            )
+            for team in ("blue", "orange")
+        }
         rewards = {
-            "blue": -0.001 + progress + contacts["blue"] * 0.012,
-            "orange": -0.001 - progress + contacts["orange"] * 0.012,
+            "blue": -0.0005 + progress + approach["blue"] * 0.001,
+            "orange": -0.0005 - progress + approach["orange"] * 0.001,
         }
         if scoring_team:
             other = "orange" if scoring_team == "blue" else "blue"
